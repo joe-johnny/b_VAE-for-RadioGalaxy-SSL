@@ -1,0 +1,152 @@
+import wandb
+import pytorch_lightning as pl
+import logging
+
+# import os
+# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:16"
+
+import torch
+print(torch.cuda.memory_summary())
+
+from pathlib import Path
+
+from pytorch_lightning.callbacks import LearningRateMonitor
+
+# from vae1 import CNNVAE
+from models7 import BYOL
+
+from config import load_config, update_config
+from datamodules import RGZ_DataModule
+from paths import Path_Handler, create_path
+# from finetuning import run_finetuning
+from datamodules import RGZ_DataModule, RGZ_DataModule_Finetune
+print('---------------------loaded')
+# TODO put elsewheres
+# https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch-lightning/Profile_PyTorch_Code.ipynb#scrollTo=qRoUXZdtJIUD
+
+def run_contrastive_pretraining(config, datamodule, wandb_logger):
+    paths = Path_Handler()._dict()
+
+    pl.seed_everything(config["seed"])
+
+    # Save model for test evaluation
+    # TODO might be better to use val/supervised_loss when available
+    loss_to_monitor = "train/loss"
+
+    checkpoint_mode = {
+        "min_loss": {"mode": "min", "monitor": loss_to_monitor},
+        "last": {"monitor": None},
+    }
+    ## Creates experiment path if it doesn't exist already ##
+    create_path(Path(config["checkpoints"]) / config["run_id"])
+
+    ## Initialise checkpoint ##
+    pretrain_checkpoint = pl.callbacks.ModelCheckpoint(
+        # **checkpoint_mode[config["evaluation"]["checkpoint_mode"]],
+        monitor=None,
+        every_n_epochs=1,
+        save_on_train_epoch_end=True,
+        auto_insert_metric_name=False,
+        verbose=True,
+        dirpath=paths["checkpoints"] / config["run_id"],
+        save_last=True,
+        # e.g. byol/files/(run_id)/checkpoints/12-344-18.134.ckpt.
+        # filename="{epoch}-{step}-{loss_to_monitor:.4f}",  # filename may not work here TODO
+        filename="model",
+        save_weights_only=True,
+    )
+    logging.info(f"checkpoint monitoring: {checkpoint_mode[config['evaluation']['checkpoint_mode']]}")
+
+    ## Initialise callbacks ##
+    callbacks = [pretrain_checkpoint]
+
+    # add learning rate monitor, only supported with a logger
+    if wandb_logger is not None:
+        # change to step, may be slow
+        callbacks += [LearningRateMonitor(logging_interval="step")]
+
+    # if config['profiler'] == 'kineto':
+    # callbacks += [profiler_callback]
+
+    logging.info(f"Threads: {torch.get_num_threads()}")
+
+    ## Initialise pytorch lightning trainer ##
+    pre_trainer = pl.Trainer(
+        **config["trainer"],
+        max_epochs=config["model"]["n_epochs"],
+        check_val_every_n_epoch=config["evaluation"]["check_val_every_n_epoch"],
+        logger=wandb_logger,
+        callbacks=callbacks,
+        log_every_n_steps=200,
+        # max_steps = 200  # TODO temp
+    )
+
+    # Initialise model #
+    model = BYOL(config, vae_ckpt_path="/share/nas2_3/jalphonse/cnn_vae_rgz_zdim8.pt")
+
+    # Train model #
+    pre_trainer.fit(model, datamodule)
+    pre_trainer.test(model, dataloaders=datamodule)
+
+    return pretrain_checkpoint, model
+
+
+def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s: %(message)s",
+    )
+
+    ## Load up config from yml files ##
+    config = load_config()
+    update_config(config)
+    print('config loaded')
+    wandb.init(project=config["project_name"])
+    config["run_id"] = str(wandb.run.id)
+
+    paths = Path_Handler()._dict()
+
+    wandb_logger = pl.loggers.WandbLogger(
+        project=config["project_name"],
+        # and will then add e.g. run-20220513_122412-l5ikqywp automatically
+        save_dir=paths["files"] / config["run_id"],
+        # log_model="True",
+        # reinit=True,
+        config=config,
+    )
+
+    config["files"] = paths["files"]
+
+    # vae = CNNVAE(z_dim=8)
+    # vae_ckpt_path = "/share/nas2_3/jalphonse/cnn_vae_rgz_zdim8.pt"
+    # vae.load_state_dict(torch.load(vae_ckpt_path))
+
+    datamodule = RGZ_DataModule(
+        path=paths["rgz"],
+        batch_size=config["data"]["batch_size"],
+        center_crop=config["augmentations"]["center_crop"],
+        # random_crop=config["augmentations"]["random_crop"],
+        # s=config["augmentations"]["s"],
+        # p_blur=config["augmentations"]["p_blur"],
+        # flip=config["augmentations"]["flip"],
+        # rotation=config["augmentations"]["rotation"],
+        # use_vae=config["augmentations"]["use_vae"],
+        # vae_model=vae,
+        cut_threshold=config["data"]["cut_threshold"],
+        prefetch_factor=config["dataloading"]["prefetch_factor"],
+        num_workers=config["dataloading"]["num_workers"],
+    )
+
+
+
+    ## Run pretraining ##
+    pretrain_checkpoint, model = run_contrastive_pretraining(config, datamodule, wandb_logger)
+
+    wandb.save(pretrain_checkpoint.best_model_path)
+    # wadnb.save()
+    wandb_logger.experiment.finish()
+
+
+if __name__ == "__main__":
+    main()
+
