@@ -41,8 +41,6 @@ class CNNDecoder(nn.Module):
         self.fc1 = nn.Linear(z_dim, 128)
         self.fc2 = nn.Linear(128, 64*9*9)
         self.deconv_layers = nn.Sequential(
-            # nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1),
-            # nn.ReLU(),
             nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -71,7 +69,7 @@ class CNNVAE(nn.Module):
         
     def reparam_trick(self, mu, log_var):
         sigma = torch.exp(0.5*log_var)
-        epsilon = torch.randn_like(sigma) * torch.sqrt(torch.tensor(0.3, dtype=mu.dtype, device=mu.device))
+        epsilon = torch.randn_like(sigma) * torch.sqrt(torch.tensor(0.5, dtype=mu.dtype, device=mu.device))  #change 0.5 value to change variance. variance set at 0.5 due to better results as explained in the paper.
         z = mu + (epsilon * sigma)
         return z
     
@@ -84,53 +82,27 @@ class CNNVAE(nn.Module):
         
         x_recon = self.decoder(z)
         return x_recon
-    
-    
-    
-# #Augmentation
-# class VAEAugmentation:
-#     def __init__(self, vae_model):
-#         self.vae = vae_model
-#         self.vae.eval()
-#         self.to_tensor = T.ToTensor()
-
-#     @torch.no_grad()
-#     def __call__(self, img):
-#         # Convert PIL to tensor if necessary
-#         if not isinstance(img, torch.Tensor):
-#             img = self.to_tensor(img)
-
-#         if img.ndim == 3:
-#             img = img.unsqueeze(0)  # (C,H,W) -> (1,C,H,W)
-
-#         recon = self.vae(img, mask_latent_dims=None)
-#         recon = recon.squeeze(0).cpu()  # (1,C,H,W) -> (C,H,W)
-    
-#         return to_pil_image(recon)
-
+        
 class VAEAugmentation:
     def __init__(self, vae_model, device="cuda", mask_latent_dims=None):
         self.device = device
-        self.vae = vae_model.to(self.device)   # move VAE to GPU
+        self.vae = vae_model.to(self.device)  
         self.vae.eval()
         self.mask_latent_dims = mask_latent_dims
         self.to_tensor = T.ToTensor()
 
     @torch.no_grad()
     def __call__(self, img):
-        # Convert PIL -> tensor if needed
+        # Convert PIL - tensor if needed
         if not isinstance(img, torch.Tensor):
             img = self.to_tensor(img)
 
         if img.ndim == 3:
             img = img.unsqueeze(0)  # (C,H,W) -> (1,C,H,W)
 
-        # Move input to GPU
+    
         img = img.to(self.device)
-
-        # Run through VAE on GPU
         recon = self.vae(img, mask_latent_dims=self.mask_latent_dims)
 
-        # Bring result back to CPU, convert to PIL
         recon = recon.squeeze(0).cpu()
         return to_pil_image(recon)
