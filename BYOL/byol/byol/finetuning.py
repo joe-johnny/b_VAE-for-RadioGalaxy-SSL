@@ -304,18 +304,9 @@ def main():
 
     ## Run finetuning ##
     for seed in range(config_finetune["finetune"]["iterations"]):
-        # for seed in range(1, 10):
-
-        manual_ckpt_path = "/share/nas2_3/jalphonse/BYOL/byol/checkpoints/80531p73/last.ckpt"
-        # byol_ckpt_path = "/share/nas2_3/jalphonse/BYOL/byol/checkpoints/byol.ckpt"
+        manual_ckpt_path = "your_path/last.ckpt"  #checkpoint file path of the model
         model = BYOL.load_from_checkpoint(manual_ckpt_path)
         
-        # if config_finetune["finetune"]["run_id"].lower() != "none":
-        #     experiment_dir = paths["files"] / config_finetune["finetune"]["run_id"] / "checkpoints"
-        #     model = BYOL.load_from_checkpoint(experiment_dir / "last.ckpt")
-        # else:
-        #     model = BYOL.load_from_checkpoint("byol.ckpt")
-
         ## Load up config from model to save correct hparams for easy logging ##
         config = model.config
         config.update(config_finetune)
