@@ -12,8 +12,7 @@ from pathlib import Path
 
 from pytorch_lightning.callbacks import LearningRateMonitor
 
-# from vae1 import CNNVAE
-from models7 import BYOL
+from models import BYOL
 
 from config import load_config, update_config
 from datamodules import RGZ_DataModule
@@ -82,7 +81,7 @@ def run_contrastive_pretraining(config, datamodule, wandb_logger):
     )
 
     # Initialise model #
-    model = BYOL(config, vae_ckpt_path="/share/nas2_3/jalphonse/cnn_vae_rgz_zdim8.pt")
+    model = BYOL(config, vae_ckpt_path="/your_path_to/cnn_vae_rgz_zdim8.pt") #path to vae model
 
     # Train model #
     pre_trainer.fit(model, datamodule)
@@ -117,21 +116,10 @@ def main():
 
     config["files"] = paths["files"]
 
-    # vae = CNNVAE(z_dim=8)
-    # vae_ckpt_path = "/share/nas2_3/jalphonse/cnn_vae_rgz_zdim8.pt"
-    # vae.load_state_dict(torch.load(vae_ckpt_path))
-
     datamodule = RGZ_DataModule(
         path=paths["rgz"],
         batch_size=config["data"]["batch_size"],
         center_crop=config["augmentations"]["center_crop"],
-        # random_crop=config["augmentations"]["random_crop"],
-        # s=config["augmentations"]["s"],
-        # p_blur=config["augmentations"]["p_blur"],
-        # flip=config["augmentations"]["flip"],
-        # rotation=config["augmentations"]["rotation"],
-        # use_vae=config["augmentations"]["use_vae"],
-        # vae_model=vae,
         cut_threshold=config["data"]["cut_threshold"],
         prefetch_factor=config["dataloading"]["prefetch_factor"],
         num_workers=config["dataloading"]["num_workers"],
@@ -143,7 +131,6 @@ def main():
     pretrain_checkpoint, model = run_contrastive_pretraining(config, datamodule, wandb_logger)
 
     wandb.save(pretrain_checkpoint.best_model_path)
-    # wadnb.save()
     wandb_logger.experiment.finish()
 
 
