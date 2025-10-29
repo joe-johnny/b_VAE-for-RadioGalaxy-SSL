@@ -11,8 +11,7 @@ from lightly.models.utils import update_momentum
 from pytorch_lightning.callbacks import Callback
 import torchvision.transforms as T
 
-from vae1 import CNNVAE
-
+from vae import CNNVAE
 from byol.evaluation import Lightning_Eval
 from byol.utilities import _optimizer, _scheduler
 from byol.resnet import _get_resnet
@@ -43,13 +42,6 @@ class BYOLProjectionHead(nn.Module):
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor):
-        """Computes one forward pass through the projection head.
-
-        Args:
-            x:
-                Input of shape bsz x num_ftrs.
-
-        """
         return self.layers(x)
 
 def _blur_kernel(input_height):
@@ -59,7 +51,7 @@ def _blur_kernel(input_height):
     return blur_kernel
 
 class BYOL(Lightning_Eval):
-    def __init__(self, config, vae_ckpt_path="/share/nas2_3/jalphonse/cnn_vae_rgz_zdim8.pt"):
+    def __init__(self, config, vae_ckpt_path="your_vae_ckpt_path/cnn_vae_rgz_zdim8.pt"): #path for vae model checkpoint
         super().__init__(config)
         self.config = config
         self.save_hyperparameters(ignore=["encoder"])  # save hyperparameters for easy inference
@@ -146,7 +138,7 @@ class BYOL(Lightning_Eval):
     #-----------------------
 
     def forward(self, x):
-        return self.encoder(x)  # dimension (batch, features), features from config e.g. 512
+        return self.encoder(x) 
 
     def project(self, x):
         # representation
