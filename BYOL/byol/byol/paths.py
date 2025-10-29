@@ -27,9 +27,9 @@ class Path_Handler:
         """Create dictionary of required paths"""
 
         # self.path_dict["rgz"] = self.path_dict["data"] / "rgz"
-        self.path_dict["rgz"] = Path("/share/nas2_3/jalphonse/data/rgz")
+        self.path_dict["rgz"] = Path("/your_path/rgz")
         # self.path_dict["mb"] = self.path_dict["data"] / "mb"
-        self.path_dict["mb"] = Path("/share/nas2_3/jalphonse/data/rgz")
+        self.path_dict["mb"] = Path("/your_path/rgz")
         self.path_dict["checkpoints"] = self.path_dict["project"] / "checkpoints"
 
     def create_paths(self):
