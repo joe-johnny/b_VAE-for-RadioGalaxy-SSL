@@ -9,7 +9,6 @@ from sklearn.model_selection import train_test_split
 from typing import Any, Dict, List, Tuple, Type, Optional
 from torch.utils.data import Subset
 
-# from vae import CNNVAE, VAEAugmentation
 
 from byol.utilities import rgz_cut, train_val_test_split
 from byol.paths import Path_Handler
@@ -22,8 +21,6 @@ class SimpleView(nn.Module):
         self.config = config
 
         augs = []
-        # if config['dataset'] == 'gz2':  # is a tensor, needs to be a PIL to later call T.ToTensor
-        #     augs.append(T.ToPILImage())
 
         if config["data"]["rotate"]:
             augs.append(T.RandomRotation(180))
@@ -37,7 +34,6 @@ class SimpleView(nn.Module):
         self.view = T.Compose(augs)
 
         self.normalize = T.Normalize(mu, sig)
-        # self.normalize = lambda x: x  # TODO temporarily disable normalisation (see also MultiView)
 
     def __call__(self, x):
         # Use rotation if training
@@ -132,13 +128,6 @@ class RGZ_DataModule(Base_DataModule):
         path,
         batch_size,
         center_crop,
-        # random_crop,
-        # s,
-        # p_blur,
-        # flip,
-        # rotation,
-        # use_vae = False,
-        # vae_model = None,
         cut_threshold=25,
         num_workers=0,
         prefetch_factor=20,
@@ -149,54 +138,8 @@ class RGZ_DataModule(Base_DataModule):
         self.path = path
         self.cut_threshold = cut_threshold
 
-        # self.vae_model = vae_model
-        # self.use_vae = use_vae
-
         self.mu = (0.008008896,)
         self.sig = (0.05303395,)
-
-        # Train transforms
-        
-        # #vae
-        # if self.use_vae:
-        #     assert self.vae_model is not None, "VAE model provided for use_vae=True"
-        #     self.vae_aug = VAEAugmentation(self.vae_model)
-        # else:
-        #     self.vae_aug = None
-        
-        # augs = []
-        # #vae
-        # if self.vae_aug:
-        #     augs += [self.vae_aug]
-
-        # #rotation
-        # if rotation:
-        #     augs += [T.RandomRotation(180)]
-
-        # #crop
-        # # augs += [T.CenterCrop(center_crop), T.RandomResizedCrop(center_crop, scale=random_crop)]
-        # augs += [T.CenterCrop(center_crop)]
-
-        # if random_crop is not None and random_crop != (1.0, 1.0):
-        #     augs+=[T.RandomResizedCrop(center_crop, scale=random_crop)]
-
-        # #flip
-        # if flip:
-        #     augs += [T.RandomHorizontalFlip(), T.RandomVerticalFlip()]
-        
-        # #colorjitter
-        # #Blur
-        # augs += [
-        #     T.RandomApply([T.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0)], p=0.8),
-        #     T.ToTensor(),                                                           #tensor
-        #     T.RandomApply([T.GaussianBlur(_blur_kernel(center_crop))], p=p_blur),
-        #     T.Normalize(self.mu, self.sig),                                        #normalize
-        # ]
-
-        
-    
-        # train_transform = T.Compose(augs)
-        # self.train_transform = MultiView(train_transform)
 
         self.train_transform = T.Compose([
             T.ToTensor()
@@ -539,4 +482,4 @@ class RGZ_DataModule_Finetune_Regression(FineTuning_DataModule):
             test_size=0.2,
             val_seed=self.seed,
             test_seed=69,
-        )
+        )            
