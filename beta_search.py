@@ -655,7 +655,9 @@ def main():
         latent_traversal(trained_model, sample_img, z_dim, beta) #latent traversal
 
         wandb.finish()
-    
+
+    # Note: Higgins metric is unreliable across runs (see paper).
+    # Beta selection was based on latent traversal plots, not this value.
     optimal_beta = max(results, key=results.get) #finding optimal beta value
     print(f'Optimal Beta: {optimal_beta}, Accuracy: {results[optimal_beta]:.4f}')
     
