@@ -1,4 +1,14 @@
 #VAE RGZ
+"""
+beta-VAE training on the Radio Galaxy Zoo (RGZ108k) dataset.
+
+Trains a convolutional beta-VAE with KL annealing to learn disentangled 
+morphological representations of radio galaxies. The trained model is used 
+as a view generator for BYOL-based self-supervised learning (see BYOL/).
+
+Paper: Joseph Alphonse & Scaife (2025) -- https://arxiv.org/abs/2602.18923
+Author: Johnny Joseph Alphonse, Jodrell Bank Centre for Astrophysics, UoM
+"""
 
 #Importing libraries
 import numpy as np
@@ -441,6 +451,30 @@ def generate_prior_samples(model, z_dim, m, save_path):
     wandb.log({"prior_samples": [wandb.Image(save_path)]})
     wandb.finish()
 
+#latent traversal function
+def latent_traversal(model, x, z_dim): 
+    with torch.no_grad():
+        mu, _ = model.encode(x.unsqueeze(0).to(device))
+        steps = 7 #steps in latent traversal
+        traversal_range = np.linspace(-3, 3, steps) #range of traversal
+        fig, axes = plt.subplots(z_dim, steps, figsize=(steps*2, z_dim*2))
+
+        for i in range(z_dim):
+            for j, val in enumerate(traversal_range):
+                z = mu.clone()
+                z[0,i] = val
+                # z[0,6] = 0.0
+                x_recon = model.decode(z).cpu().numpy().squeeze()
+                axes[i,j].imshow(x_recon, cmap = 'magma') #plotting
+                axes[i,j].axis('off') #
+                if j == 0 : #
+                    axes[i,j].set_ylabel(f'z[{i}]', rotation = 0, labelpad = 20)
+                if i == 0: #
+                    axes[i,j].set_title(f'{val:.1f}') #
+            
+        
+        plt.savefig('lt_rgz8.png', bbox_inches='tight')
+        plt.close(fig)
 
 # CNNVae model
 class CNNEncoder(nn.Module):
@@ -525,7 +559,7 @@ class CNNVAE(nn.Module):
     
 # DataSet Loading
 transform = transforms.ToTensor()       
-root = os.path.abspath("path")
+root = os.path.abspath("./data")
 
 # Load training dataset
 train_dataset = RGZ108k(
@@ -740,30 +774,6 @@ all_imgs = torch.cat(all_imgs, dim=0)
 
 sample_img = all_imgs[13]
 
-#latent traversal function
-def latent_traversal(model, x, z_dim): 
-    with torch.no_grad():
-        mu, _ = model.encode(x.unsqueeze(0).to(device))
-        steps = 7 #steps in latent traversal
-        traversal_range = np.linspace(-3, 3, steps) #range of traversal
-        fig, axes = plt.subplots(z_dim, steps, figsize=(steps*2, z_dim*2))
-
-        for i in range(z_dim):
-            for j, val in enumerate(traversal_range):
-                z = mu.clone()
-                z[0,i] = val
-                # z[0,6] = 0.0
-                x_recon = model.decode(z).cpu().numpy().squeeze()
-                axes[i,j].imshow(x_recon, cmap = 'magma') #plotting
-                axes[i,j].axis('off') #
-                if j == 0 : #
-                    axes[i,j].set_ylabel(f'z[{i}]', rotation = 0, labelpad = 20)
-                if i == 0: #
-                    axes[i,j].set_title(f'{val:.1f}') #
-            
-        
-        plt.savefig('lt_rgz8.png', bbox_inches='tight')
-        plt.close(fig)
 
 latent_traversal(model, sample_img, z_dim)
 
