@@ -131,12 +131,15 @@ Key results are reported in the accompanying paper ([arXiv:2602.18923](https://a
 
 ### Reconstructions
 ![Reconstructions](figures/reconstructions.jpg)
+*Reconstructions of a RGZ radio source with  = 2.3. The original is shown at left in each row, followed by multiple stochastic reconstructions obtained by adding Gaussian noise to the latent code at increasing levels: (A) σ² = 0.1, (B) σ² = 0.5, (C) σ² = 1.0.*
 
 ### Generated Samples
 ![Generated Samples](figures/generations.jpg)
+*Synthetic samples from the latent space of a β-VAE trained on the Radio Galaxy Zoo dataset with β = 2.3. Each row shows generations obtained by adding Gaussian noise to the latent code at increasing levels: (A) σ² = 0.1, (B) σ² = 0.5, (C) σ² = 1.0.*
 
 ### Latent Traversals
 ![Latent Traversals](figures/LT_RGZ_23.png)
+*Latent traversal map showing all 8 dimensions with disentangled factors in RGZ data using β-VAE with β = 2.3.*
 
 ---
 
